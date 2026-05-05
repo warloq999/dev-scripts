@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# deploy.sh — Pull latest from origin/main + Deploy Docker services from ~/vibecoders/deploy/
+# deploy.sh — Sync all workspaces to GitHub + Pull into deploy + Deploy Docker services
 # Usage: ./deploy.sh [project|all]
 # Examples:
-#   ./deploy.sh ai_email_workflow  # deploy single project
-#   ./deploy.sh all                # deploy all 4 projects
+#   ./deploy.sh portfolioDash  # deploy single project
+#   ./deploy.sh all           # deploy all 4 projects
 
 set -euo pipefail
 
@@ -15,6 +15,9 @@ PROJECTS=(ai_email_workflow dragonAgent obsidian-task-service portfolioDash)
 echo "========================================"
 echo "  Deploying from $DEPLOY_DIR"
 echo "========================================"
+
+# Step 1: Sync all workspaces to GitHub before deploying
+sync_workspaces
 
 deploy_project() {
   local proj=$1

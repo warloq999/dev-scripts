@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# build.sh — Pull latest from origin/main + Build Docker images from ~/vibecoders/deploy/
+# build.sh — Sync all workspaces to GitHub + Pull into deploy + Build Docker images
 # Usage: ./build.sh [project|all]
 # Examples:
-#   ./build.sh ai_email_workflow  # build single project
-#   ./build.sh all                # build all 4 projects
+#   ./build.sh portfolioDash  # build single project
+#   ./build.sh all           # build all 4 projects
 
 set -euo pipefail
 
@@ -15,6 +15,9 @@ PROJECTS=(ai_email_workflow dragonAgent obsidian-task-service portfolioDash)
 echo "========================================"
 echo "  Building from $DEPLOY_DIR"
 echo "========================================"
+
+# Step 1: Sync all workspaces to GitHub before building
+sync_workspaces
 
 build_project() {
   local proj=$1
