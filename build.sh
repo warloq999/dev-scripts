@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build.sh — Pull latest from origin/main + Build all Docker images from ~/vibecoders/deploy/
+# build.sh — Pull latest from origin/main + Build Docker images from ~/vibecoders/deploy/
 # Usage: ./build.sh [project|all]
 # Examples:
 #   ./build.sh ai_email_workflow  # build single project
