@@ -10,7 +10,7 @@ PROJECTS=(ai_email_workflow dragonAgent obsidian-task-service portfolioDash)
 # ── Step 1: Sync all workspaces with each other and push to GitHub ──────────────
 sync_workspaces() {
   echo ""
-  echo "  [workspace sync] Pulling all workspaces from GitHub..."
+  echo "  [workspace sync] Syncing all workspaces to GitHub..."
 
   for ws in "${WORKSPACES[@]}"; do
     for proj in "${PROJECTS[@]}"; do
@@ -19,14 +19,40 @@ sync_workspaces() {
         continue
       fi
 
-      # Pull from GitHub (origin) — handles any commits made directly in this workspace
-      if git -C "$proj_dir" rev-parse '@{upstream}' &>/dev/null; then
-        echo "    $ws/$proj — pulling from origin"
-        git -C "$proj_dir" fetch origin --quiet
-        if git -C "$proj_dir" log origin/main..HEAD --oneline | grep -q .; then
-          echo "    $ws/$proj — pushing $(git -C "$proj_dir" log origin/main..HEAD --oneline | wc -l) commit(s) to origin"
-          git -C "$proj_dir" push origin main
+      if ! git -C "$proj_dir" rev-parse '@{upstream}' &>/dev/null; then
+        continue
+      fi
+
+      echo "    $ws/$proj"
+
+      # Fetch latest from origin
+      git -C "$proj_dir" fetch origin --quiet
+
+      # Check if local has commits not on origin/main
+      if git -C "$proj_dir" log origin/main..HEAD --oneline | grep -q .; then
+        local_ahead=$(git -C "$proj_dir" log origin/main..HEAD --oneline | wc -l)
+        echo "    $ws/$proj — $local_ahead commit(s) ahead of origin, pushing..."
+
+        # Try push, handle rejection with rebase
+        if ! git -C "$proj_dir" push origin main 2>&1; then
+          echo "    $ws/$proj — remote moved, rebasing on top of origin/main..."
+          # Fetch the conflicting remote changes and rebase
+          git -C "$proj_dir" fetch origin main --quiet
+          if git -C "$proj_dir" rebase origin/main 2>&1; then
+            echo "    $ws/$proj — rebase successful, pushing..."
+            git -C "$proj_dir" push origin main
+          else
+            echo "    $ws/$proj — rebase conflict, aborting and skipping"
+            git -C "$proj_dir" rebase --abort &>/dev/null || true
+          fi
         fi
+      fi
+
+      # Also pull if origin is ahead (no force push on pull side)
+      if git -C "$proj_dir" log HEAD..origin/main --oneline | grep -q .; then
+        remote_ahead=$(git -C "$proj_dir" log HEAD..origin/main --oneline | wc -l)
+        echo "    $ws/$proj — origin is $remote_ahead commit(s) ahead, pulling..."
+        git -C "$proj_dir" pull origin main --rebase --quiet
       fi
     done
   done
