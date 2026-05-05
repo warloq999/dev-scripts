@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-VIBECODERS_DIR="$HOME/vibecoders"
+VIBECODERS_DIR="/home/dragonagent/vibecoders"
 DEPLOY_DIR="$VIBECODERS_DIR/deploy"
 PROJECTS=(ai_email_workflow dragonAgent obsidian-task-service portfolioDash)
 
