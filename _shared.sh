@@ -25,41 +25,52 @@ sync_workspaces() {
 
       echo "    $ws/$proj"
 
-      # Stash any unstaged changes before touching the repo
+      # Always work on the main branch — save current branch first
+      local original_branch
+      original_branch=$(git -C "$proj_dir" symbolic-ref --short HEAD 2>/dev/null || git -C "$proj_dir" rev-parse HEAD)
+      local saved=0
+
+      # Stash unstaged changes before touching anything
       if ! git -C "$proj_dir" diff-index --quiet HEAD -- 2>/dev/null; then
         echo "    $ws/$proj — stashing unstaged changes..."
         git -C "$proj_dir" stash --include-untracked -q
+        saved=1
       fi
 
-      # Fetch latest from origin
+      # Fetch latest origin state
       git -C "$proj_dir" fetch origin --quiet
 
-      # Pull if origin is ahead (converge — no force push)
+      # Pull origin/main into local main if origin is ahead
       if git -C "$proj_dir" log HEAD..origin/main --oneline | grep -q .; then
-        remote_ahead=$(git -C "$proj_dir" log HEAD..origin/main --oneline | wc -l)
-        echo "    $ws/$proj — origin is $remote_ahead commit(s) ahead, pulling..."
+        local ahead=$(git -C "$proj_dir" log HEAD..origin/main --oneline | wc -l)
+        echo "    $ws/$proj — origin/main is $ahead commit(s) ahead, pulling..."
+        git -C "$proj_dir" checkout main -q 2>/dev/null || true
         git -C "$proj_dir" pull origin main --rebase -q
       fi
 
-      # Push if local has commits not on origin/main
-      if git -C "$proj_dir" log origin/main..HEAD --oneline | grep -q .; then
-        local_ahead=$(git -C "$proj_dir" log origin/main..HEAD --oneline | wc -l)
-        echo "    $ws/$proj — $local_ahead commit(s) ahead of origin, pushing..."
+      # Push local main to origin/main if ahead
+      if git -C "$proj_dir" log origin/main..main --oneline | grep -q .; then
+        local_ahead=$(git -C "$proj_dir" log origin/main..main --oneline | wc -l)
+        echo "    $ws/$proj — local main is $local_ahead commit(s) ahead of origin, pushing..."
         if ! git -C "$proj_dir" push origin main 2>&1; then
-          echo "    $ws/$proj — remote moved, rebasing on top of origin/main..."
+          echo "    $ws/$proj — rejected, rebasing local main on origin/main..."
           if git -C "$proj_dir" fetch origin main --quiet && \
              git -C "$proj_dir" rebase origin/main 2>&1; then
-            echo "    $ws/$proj — rebase successful, pushing..."
             git -C "$proj_dir" push origin main
           else
-            echo "    $ws/$proj — rebase conflict, aborting and skipping"
+            echo "    $ws/$proj — rebase conflict, skipping push"
             git -C "$proj_dir" rebase --abort &>/dev/null || true
           fi
         fi
       fi
 
-      # Restore stashed changes if any
-      if git -C "$proj_dir" stash list | grep -q .; then
+      # Return to original branch
+      if [[ "$original_branch" != "main" ]]; then
+        git -C "$proj_dir" checkout "$original_branch" -q 2>/dev/null || true
+      fi
+
+      # Restore stashed changes
+      if [[ "$saved" == "1" ]]; then
         echo "    $ws/$proj — restoring stashed changes..."
         git -C "$proj_dir" stash pop -q 2>/dev/null || true
       fi
