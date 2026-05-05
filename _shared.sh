@@ -25,20 +25,30 @@ sync_workspaces() {
 
       echo "    $ws/$proj"
 
+      # Stash any unstaged changes before touching the repo
+      if ! git -C "$proj_dir" diff-index --quiet HEAD -- 2>/dev/null; then
+        echo "    $ws/$proj — stashing unstaged changes..."
+        git -C "$proj_dir" stash --include-untracked -q
+      fi
+
       # Fetch latest from origin
       git -C "$proj_dir" fetch origin --quiet
 
-      # Check if local has commits not on origin/main
+      # Pull if origin is ahead (converge — no force push)
+      if git -C "$proj_dir" log HEAD..origin/main --oneline | grep -q .; then
+        remote_ahead=$(git -C "$proj_dir" log HEAD..origin/main --oneline | wc -l)
+        echo "    $ws/$proj — origin is $remote_ahead commit(s) ahead, pulling..."
+        git -C "$proj_dir" pull origin main --rebase -q
+      fi
+
+      # Push if local has commits not on origin/main
       if git -C "$proj_dir" log origin/main..HEAD --oneline | grep -q .; then
         local_ahead=$(git -C "$proj_dir" log origin/main..HEAD --oneline | wc -l)
         echo "    $ws/$proj — $local_ahead commit(s) ahead of origin, pushing..."
-
-        # Try push, handle rejection with rebase
         if ! git -C "$proj_dir" push origin main 2>&1; then
           echo "    $ws/$proj — remote moved, rebasing on top of origin/main..."
-          # Fetch the conflicting remote changes and rebase
-          git -C "$proj_dir" fetch origin main --quiet
-          if git -C "$proj_dir" rebase origin/main 2>&1; then
+          if git -C "$proj_dir" fetch origin main --quiet && \
+             git -C "$proj_dir" rebase origin/main 2>&1; then
             echo "    $ws/$proj — rebase successful, pushing..."
             git -C "$proj_dir" push origin main
           else
@@ -48,11 +58,10 @@ sync_workspaces() {
         fi
       fi
 
-      # Also pull if origin is ahead (no force push on pull side)
-      if git -C "$proj_dir" log HEAD..origin/main --oneline | grep -q .; then
-        remote_ahead=$(git -C "$proj_dir" log HEAD..origin/main --oneline | wc -l)
-        echo "    $ws/$proj — origin is $remote_ahead commit(s) ahead, pulling..."
-        git -C "$proj_dir" pull origin main --rebase --quiet
+      # Restore stashed changes if any
+      if git -C "$proj_dir" stash list | grep -q .; then
+        echo "    $ws/$proj — restoring stashed changes..."
+        git -C "$proj_dir" stash pop -q 2>/dev/null || true
       fi
     done
   done
