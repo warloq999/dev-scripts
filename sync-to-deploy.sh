@@ -41,6 +41,15 @@ for proj in "${PROJECTS[@]}"; do
         --exclude 'logs' \
         --exclude 'backups' \
         --exclude 'imports' \
+        --exclude 'docker-compose.yml' \
+        --exclude 'docker-compose.*.yml' \
+        --exclude 'docker-compose*.yml' \
+        --exclude 'nginx.conf' \
+        --exclude 'Dockerfile' \
+        --exclude '.dockerignore' \
+        --exclude 'docker-*.sh' \
+        --exclude 'docker-*.ps1' \
+        --exclude 'startup-entrypoint.sh' \
         "$src/" "$dst/"
 
   echo "  ✓ $proj synced"
