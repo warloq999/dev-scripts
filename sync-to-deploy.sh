@@ -20,7 +20,7 @@ for proj in "${PROJECTS[@]}"; do
   dst="$DEPLOY_DIR/$proj"
 
   if [[ ! -d "$src" ]]; then
-    echo "  --- $proj: source not found in cursor/, skipping ---"
+    echo "  --- $proj: source not found in hermes/, skipping ---"
     continue
   fi
 
