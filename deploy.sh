@@ -10,7 +10,7 @@ set -euo pipefail
 DEPLOY_DIR="/home/dragonagent/vibecoders/deploy"
 source "$(dirname "$0")/_shared.sh"
 
-PROJECTS=(ai_email_workflow dragonAgent obsidian-task-service portfolioDash)
+PROJECTS=(ai_email_workflow dragonAgent obsidian-task-service portfolioDash portfolioDash2.0 squaddy)
 
 echo "========================================"
 echo "  Deploying from $DEPLOY_DIR"
